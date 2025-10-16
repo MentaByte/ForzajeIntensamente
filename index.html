@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Galería de Emociones</title>
+  <link rel="manifest" href="./manifest.json">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #ffffff;
+      height: 100vh;
+      width: 100vw;
+      touch-action: pan-x;
+    }
+    .gallery-container {
+      width: 100vw;
+      height: 100vh;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      display: flex;
+      -webkit-overflow-scrolling: touch;
+    }
+    .gallery {
+      display: flex;
+      height: 100vh;
+    }
+    .gallery img {
+      width: 100vw;
+      height: 100vh;
+      object-fit: contain;
+      scroll-snap-align: start;
+      flex: 0 0 auto;
+    }
+    #touchCounter {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      background-color: rgba(0, 0, 0, 0.2);
+      color: #000000;
+      padding: 2px 8px;
+      border-radius: 10px;
+      z-index: 1000;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+    }
+    #fullScreenImage {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: contain;
+      background-color: white;
+      z-index: 9999;
+    }
+    #installButton {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 20px;
+      z-index: 1000;
+      display: none;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="gallery-container">
+    <div class="gallery">
+      <img src="./ABURRIMIENTO.jpg" alt="Aburrimiento">
+      <img src="./ALEGRIA.jpg" alt="Alegría">
+      <img src="./ANSIEDAD.jpg" alt="Ansiedad">
+      <img src="./DESAGRADO.jpg" alt="Desagrado">
+      <img src="./ENVIDIA.jpg" alt="Envidia">
+      <img src="./FURIA.jpg" alt="Furia">
+      <img src="./MIEDO.jpg" alt="Miedo">
+      <img src="./TRISTEZA.jpg" alt="Tristeza">
+      <img src="./VERGUENZA.jpg" alt="Vergüenza">
+    </div>
+  </div>
+
+  <div id="touchCounter">0</div>
+  <button id="installButton">Instalar App</button>
+
+  <img id="fullScreenImage" src="./FORZAJE.jpg" alt="Forzaje">
+
+  <script>
+    let touchCount = 0;
+    const touchCounterElement = document.getElementById("touchCounter");
+    let isCounting = true;
+
+    function incrementTouchCount() {
+      if (!isCounting) return;
+      touchCount++;
+      touchCounterElement.textContent = touchCount;
+      if (touchCount >= 10) {
+        const fullScreenImage = document.getElementById("fullScreenImage");
+        fullScreenImage.style.display = "block";
+        isCounting = false;
+        if (navigator.vibrate) navigator.vibrate(200);
+        enterFullscreen();
+      }
+    }
+
+    function enterFullscreen() {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) elem.requestFullscreen().catch(() => {});
+    }
+
+    function lockOrientation() {
+      if (screen.orientation?.lock) {
+        screen.orientation.lock('portrait').catch(() => {});
+      }
+    }
+
+    let deferredPrompt;
+    const installButton = document.getElementById('installButton');
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installButton.style.display = 'block';
+    });
+
+    installButton.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') installButton.style.display = 'none';
+      deferredPrompt = null;
+    });
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('SW registrado'))
+      .catch(err => console.log('Error SW:', err));
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.body.addEventListener("touchstart", incrementTouchCount);
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        setTimeout(() => {
+          lockOrientation();
+          enterFullscreen();
+        }, 500);
+      }
+    });
+  </script>
+</body>
+</html>
