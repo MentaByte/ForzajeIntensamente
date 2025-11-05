@@ -17,19 +17,20 @@
       background-color: #000000;
       height: 100vh;
       width: 100vw;
-      touch-action: pan-x;
+      touch-action: pan-y;
     }
     .gallery-container {
       width: 100vw;
       height: 100vh;
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
+      overflow-y: auto;
+      scroll-snap-type: y mandatory;
       display: flex;
+      flex-direction: column;
       -webkit-overflow-scrolling: touch;
     }
     .gallery {
       display: flex;
-      height: 100vh;
+      flex-direction: column;
     }
     .gallery img {
       width: 100vw;
@@ -42,7 +43,7 @@
       position: fixed;
       bottom: 10px;
       left: 10px;
-      background-color: rgba(255, 255, 2555, 0.15);
+      background-color: rgba(255, 255, 255, 0.15);
       color: #cccccc;
       padding: 2px 8px;
       border-radius: 10px;
@@ -58,7 +59,7 @@
       width: 100vw;
       height: 100vh;
       object-fit: contain;
-      background-color: 000000;
+      background-color: #000000;
       z-index: 9999;
     }
     #installButton {
@@ -78,8 +79,8 @@
   </style>
 </head>
 <body>
-  <div class="gallery-container">
-    <div class="gallery">
+  <div class="gallery-container" id="galleryContainer">
+    <div class="gallery" id="gallery">
       <img src="./ABURRIMIENTO.jpg" alt="Aburrimiento">
       <img src="./ALEGRIA.jpg" alt="Alegría">
       <img src="./ANSIEDAD.jpg" alt="Ansiedad">
@@ -94,18 +95,35 @@
 
   <div id="touchCounter">0</div>
   <button id="installButton">Instalar App</button>
-
-  <img id="fullScreenImage" src="./FORZAJE.jpg" alt="Forzaje">
+  <img id="fullScreenImage" src="./FORZAJEVERTICAL.jpg" alt="Forzaje">
 
   <script>
-    let touchCount = 0;
+    const galleryContainer = document.getElementById("galleryContainer");
+    const gallery = document.getElementById("gallery");
+    const images = Array.from(gallery.children);
     const touchCounterElement = document.getElementById("touchCounter");
+    let touchCount = 0;
     let isCounting = true;
+
+    // Clonar imágenes para bucle infinito
+    function loopGallery() {
+      const scrollTop = galleryContainer.scrollTop;
+      const totalHeight = gallery.scrollHeight - galleryContainer.clientHeight;
+      if (scrollTop >= totalHeight - 10) {
+        images.forEach(img => {
+          const clone = img.cloneNode(true);
+          gallery.appendChild(clone);
+        });
+      }
+    }
+
+    galleryContainer.addEventListener("scroll", loopGallery);
 
     function incrementTouchCount() {
       if (!isCounting) return;
       touchCount++;
       touchCounterElement.textContent = touchCount;
+
       if (touchCount >= 10) {
         const fullScreenImage = document.getElementById("fullScreenImage");
         fullScreenImage.style.display = "block";
