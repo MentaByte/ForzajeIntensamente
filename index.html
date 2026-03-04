@@ -23,7 +23,7 @@
     .gallery-container {
       width: 100vw;
       height: 100vh;
-      overflow-y: auto;
+      overflow-y: scroll;
       overflow-x: hidden;
       scroll-snap-type: y mandatory;
       display: flex;
@@ -45,7 +45,7 @@
     /* ── Gallery: horizontal mode ── */
     body.horizontal .gallery-container {
       overflow-y: hidden;
-      overflow-x: auto;
+      overflow-x: scroll;
       scroll-snap-type: x mandatory;
       flex-direction: row;
     }
@@ -54,7 +54,6 @@
       height: 100vh;
     }
 
-    /* ── Touch action ── */
     body { touch-action: pan-y; }
     body.horizontal { touch-action: pan-x; }
 
@@ -117,10 +116,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background-color 0.2s;
+      transition: opacity 0.3s;
       -webkit-tap-highlight-color: transparent;
     }
-    #settingsBtn:active { background-color: rgba(255, 255, 255, 0.3); }
     #settingsBtn svg {
       width: 22px;
       height: 22px;
@@ -241,7 +239,7 @@
     }
     .toggle input:checked ~ .toggle-thumb { transform: translateX(20px); }
 
-    /* ── Slider ── */
+    /* ── Sliders ── */
     .slider-row { flex-direction: column; align-items: flex-start; gap: 10px; }
     .slider-top {
       display: flex;
@@ -253,7 +251,7 @@
       font-size: 18px;
       font-weight: 700;
       color: #4CAF50;
-      min-width: 30px;
+      min-width: 38px;
       text-align: right;
     }
     input[type=range] {
@@ -311,17 +309,7 @@
 </head>
 <body>
   <div class="gallery-container" id="galleryContainer">
-    <div class="gallery" id="gallery">
-      <img src="./ABURRIMIENTO.jpg" alt="Aburrimiento">
-      <img src="./ALEGRIA.jpg" alt="Alegría">
-      <img src="./ANSIEDAD.jpg" alt="Ansiedad">
-      <img src="./DESAGRADO.jpg" alt="Desagrado">
-      <img src="./ENVIDIA.jpg" alt="Envidia">
-      <img src="./FURIA.jpg" alt="Furia">
-      <img src="./MIEDO.jpg" alt="Miedo">
-      <img src="./TRISTEZA.jpg" alt="Tristeza">
-      <img src="./VERGUENZA.jpg" alt="Vergüenza">
-    </div>
+    <div class="gallery" id="gallery"></div>
   </div>
 
   <div id="touchCounter">0</div>
@@ -343,7 +331,6 @@
     </svg>
   </button>
 
-  <!-- Overlay (cierra el panel al tocar fuera) -->
   <div id="settingsOverlay"></div>
 
   <!-- Settings panel -->
@@ -359,21 +346,19 @@
 
     <div class="settings-body">
 
-      <!-- Interacción -->
       <div class="settings-section-label">Interacción</div>
 
       <div class="settings-row slider-row">
         <div class="slider-top">
           <div class="row-info">
             <span class="row-label">Umbral de toques</span>
-            <span class="row-desc">Toques necesarios para activar el forzaje</span>
+            <span class="row-desc">Toques para activar el forzaje</span>
           </div>
           <span class="slider-value" id="thresholdValue">10</span>
         </div>
         <input type="range" id="thresholdSlider" min="1" max="50" value="10" step="1">
       </div>
 
-      <!-- Comportamiento -->
       <div class="settings-section-label">Comportamiento</div>
 
       <div class="settings-row">
@@ -400,7 +385,6 @@
         </label>
       </div>
 
-      <!-- Interfaz -->
       <div class="settings-section-label">Interfaz</div>
 
       <div class="settings-row">
@@ -427,15 +411,39 @@
         </label>
       </div>
 
-      <!-- Acciones -->
+      <div class="settings-row slider-row">
+        <div class="slider-top">
+          <div class="row-info">
+            <span class="row-label">Opacidad del botón</span>
+            <span class="row-desc">Visibilidad del botón de configuración</span>
+          </div>
+          <span class="slider-value" id="opacityValue">100%</span>
+        </div>
+        <input type="range" id="opacitySlider" min="5" max="100" value="100" step="5">
+      </div>
+
       <div class="settings-section-label">Acciones</div>
       <button id="resetBtn">Reiniciar contador</button>
 
-      <p class="settings-version">Forzaje Intensamente · v1.1</p>
+      <p class="settings-version">Forzaje Intensamente · v1.2</p>
     </div>
   </div>
 
   <script>
+    // ── Source images ─────────────────────────────────────────
+    const IMAGES = [
+      { src: './ABURRIMIENTO.jpg', alt: 'Aburrimiento' },
+      { src: './ALEGRIA.jpg',      alt: 'Alegría'      },
+      { src: './ANSIEDAD.jpg',     alt: 'Ansiedad'     },
+      { src: './DESAGRADO.jpg',    alt: 'Desagrado'    },
+      { src: './ENVIDIA.jpg',      alt: 'Envidia'      },
+      { src: './FURIA.jpg',        alt: 'Furia'        },
+      { src: './MIEDO.jpg',        alt: 'Miedo'        },
+      { src: './TRISTEZA.jpg',     alt: 'Tristeza'     },
+      { src: './VERGUENZA.jpg',    alt: 'Vergüenza'    },
+    ];
+    const N = IMAGES.length; // 9
+
     // ── Settings ──────────────────────────────────────────────
     const DEFAULTS = {
       threshold: 10,
@@ -443,46 +451,116 @@
       fullscreen: true,
       horizontal: false,
       showCounter: true,
+      btnOpacity: 100,
     };
 
     function loadSettings() {
       try {
-        const saved = JSON.parse(localStorage.getItem('fi-settings') || '{}');
-        return { ...DEFAULTS, ...saved };
+        return { ...DEFAULTS, ...JSON.parse(localStorage.getItem('fi-settings') || '{}') };
       } catch { return { ...DEFAULTS }; }
     }
-
-    function saveSettings(s) {
-      localStorage.setItem('fi-settings', JSON.stringify(s));
+    function saveSettings() {
+      localStorage.setItem('fi-settings', JSON.stringify(settings));
     }
 
     let settings = loadSettings();
 
     // ── DOM refs ──────────────────────────────────────────────
-    const galleryContainer = document.getElementById("galleryContainer");
-    const gallery = document.getElementById("gallery");
-    const baseImages = Array.from(gallery.querySelectorAll('img[data-base]') .length
-      ? gallery.querySelectorAll('img[data-base]')
-      : gallery.children);
-    const touchCounterElement = document.getElementById("touchCounter");
-    const fullScreenImage = document.getElementById("fullScreenImage");
-    const settingsBtn = document.getElementById("settingsBtn");
-    const settingsPanel = document.getElementById("settingsPanel");
-    const settingsOverlay = document.getElementById("settingsOverlay");
-    const closePanelBtn = document.getElementById("closePanelBtn");
-    const thresholdSlider = document.getElementById("thresholdSlider");
-    const thresholdValue = document.getElementById("thresholdValue");
-    const toggleVibration = document.getElementById("toggleVibration");
-    const toggleFullscreen = document.getElementById("toggleFullscreen");
-    const toggleOrientation = document.getElementById("toggleOrientation");
-    const toggleCounter = document.getElementById("toggleCounter");
-    const resetBtn = document.getElementById("resetBtn");
+    const galleryContainer  = document.getElementById('galleryContainer');
+    const gallery           = document.getElementById('gallery');
+    const touchCounterEl    = document.getElementById('touchCounter');
+    const fullScreenImage   = document.getElementById('fullScreenImage');
+    const settingsBtn       = document.getElementById('settingsBtn');
+    const settingsPanel     = document.getElementById('settingsPanel');
+    const settingsOverlay   = document.getElementById('settingsOverlay');
+    const closePanelBtn     = document.getElementById('closePanelBtn');
+    const thresholdSlider   = document.getElementById('thresholdSlider');
+    const thresholdValue    = document.getElementById('thresholdValue');
+    const toggleVibration   = document.getElementById('toggleVibration');
+    const toggleFullscreen  = document.getElementById('toggleFullscreen');
+    const toggleOrientation = document.getElementById('toggleOrientation');
+    const toggleCounter     = document.getElementById('toggleCounter');
+    const opacitySlider     = document.getElementById('opacitySlider');
+    const opacityValue      = document.getElementById('opacityValue');
+    const resetBtn          = document.getElementById('resetBtn');
+    const installButton     = document.getElementById('installButton');
 
     let touchCount = 0;
     let isCounting = true;
 
-    // Keep track of original images for loop cloning
-    const originalImages = Array.from(gallery.children);
+    // ── Infinite gallery ──────────────────────────────────────
+    // Structure: [N clones before] [N originals] [N clones after]
+    // Total: 3N images. Start scroll = N * imageSize.
+    // On scroll: if pos < N*size → jump +N*size ; if pos ≥ 2N*size → jump -N*size.
+
+    function buildGallery() {
+      gallery.innerHTML = '';
+      for (let set = 0; set < 3; set++) {
+        IMAGES.forEach(({ src, alt }) => {
+          const img = document.createElement('img');
+          img.src = src;
+          img.alt = alt;
+          gallery.appendChild(img);
+        });
+      }
+    }
+
+    function getImageSize() {
+      return settings.horizontal ? window.innerWidth : window.innerHeight;
+    }
+
+    function initScrollPosition() {
+      const size = getImageSize();
+      // Disable scroll event temporarily to avoid feedback loop
+      scrollPaused = true;
+      if (settings.horizontal) {
+        galleryContainer.scrollLeft = N * size;
+      } else {
+        galleryContainer.scrollTop = N * size;
+      }
+      // Re-enable after browser has processed the assignment
+      requestAnimationFrame(() => { scrollPaused = false; });
+    }
+
+    let scrollPaused = false;
+
+    function handleInfiniteScroll() {
+      if (scrollPaused) return;
+      const size = getImageSize();
+      const setSize = N * size;
+
+      if (settings.horizontal) {
+        const pos = galleryContainer.scrollLeft;
+        if (pos < setSize) {
+          scrollPaused = true;
+          galleryContainer.scrollLeft = pos + setSize;
+          requestAnimationFrame(() => { scrollPaused = false; });
+        } else if (pos >= 2 * setSize) {
+          scrollPaused = true;
+          galleryContainer.scrollLeft = pos - setSize;
+          requestAnimationFrame(() => { scrollPaused = false; });
+        }
+      } else {
+        const pos = galleryContainer.scrollTop;
+        if (pos < setSize) {
+          scrollPaused = true;
+          galleryContainer.scrollTop = pos + setSize;
+          requestAnimationFrame(() => { scrollPaused = false; });
+        } else if (pos >= 2 * setSize) {
+          scrollPaused = true;
+          galleryContainer.scrollTop = pos - setSize;
+          requestAnimationFrame(() => { scrollPaused = false; });
+        }
+      }
+    }
+
+    galleryContainer.addEventListener('scroll', handleInfiniteScroll, { passive: true });
+
+    function setupGallery() {
+      buildGallery();
+      // Wait one frame so the DOM is rendered before reading sizes
+      requestAnimationFrame(initScrollPosition);
+    }
 
     // ── Orientation ───────────────────────────────────────────
     function applyOrientation() {
@@ -495,45 +573,37 @@
       }
     }
 
-    // ── Gallery loop (vertical only) ──────────────────────────
-    function loopGallery() {
-      if (settings.horizontal) return;
-      const scrollTop = galleryContainer.scrollTop;
-      const totalHeight = gallery.scrollHeight - galleryContainer.clientHeight;
-      if (scrollTop >= totalHeight - 10) {
-        originalImages.forEach(img => {
-          gallery.appendChild(img.cloneNode(true));
-        });
-      }
-    }
-
-    galleryContainer.addEventListener("scroll", loopGallery);
-
-    // ── Apply settings to UI ──────────────────────────────────
+    // ── Apply all settings ────────────────────────────────────
     function applySettings() {
-      thresholdSlider.value = settings.threshold;
+      thresholdSlider.value      = settings.threshold;
       thresholdValue.textContent = settings.threshold;
-      toggleVibration.checked = settings.vibration;
-      toggleFullscreen.checked = settings.fullscreen;
-      toggleOrientation.checked = settings.horizontal;
-      toggleCounter.checked = settings.showCounter;
-      touchCounterElement.style.opacity = settings.showCounter ? '1' : '0';
+      toggleVibration.checked    = settings.vibration;
+      toggleFullscreen.checked   = settings.fullscreen;
+      toggleOrientation.checked  = settings.horizontal;
+      toggleCounter.checked      = settings.showCounter;
+      opacitySlider.value        = settings.btnOpacity;
+      opacityValue.textContent   = settings.btnOpacity + '%';
+
+      touchCounterEl.style.opacity = settings.showCounter ? '1' : '0';
+      settingsBtn.style.opacity    = settings.btnOpacity / 100;
+
       applyOrientation();
     }
-
-    applySettings();
 
     // ── Settings panel open/close ─────────────────────────────
     function openPanel() {
       settingsPanel.classList.add('open');
       settingsOverlay.classList.add('visible');
       settingsBtn.classList.add('open');
+      // While panel is open, button stays fully visible
+      settingsBtn.style.opacity = '1';
     }
 
     function closePanel() {
       settingsPanel.classList.remove('open');
       settingsOverlay.classList.remove('visible');
       settingsBtn.classList.remove('open');
+      settingsBtn.style.opacity = settings.btnOpacity / 100;
     }
 
     settingsBtn.addEventListener('click', (e) => {
@@ -543,7 +613,6 @@
     closePanelBtn.addEventListener('click', closePanel);
     settingsOverlay.addEventListener('click', closePanel);
 
-    // Prevent panel touches from registering on the counter
     settingsPanel.addEventListener('touchstart', (e) => e.stopPropagation());
     settingsPanel.addEventListener('click', (e) => e.stopPropagation());
 
@@ -551,38 +620,46 @@
     thresholdSlider.addEventListener('input', () => {
       settings.threshold = parseInt(thresholdSlider.value);
       thresholdValue.textContent = settings.threshold;
-      saveSettings(settings);
+      saveSettings();
     });
 
     toggleVibration.addEventListener('change', () => {
       settings.vibration = toggleVibration.checked;
-      saveSettings(settings);
+      saveSettings();
     });
 
     toggleFullscreen.addEventListener('change', () => {
       settings.fullscreen = toggleFullscreen.checked;
-      saveSettings(settings);
+      saveSettings();
     });
 
     toggleOrientation.addEventListener('change', () => {
       settings.horizontal = toggleOrientation.checked;
-      saveSettings(settings);
+      saveSettings();
       applyOrientation();
-      // Reset scroll position when switching orientation
-      galleryContainer.scrollTop = 0;
-      galleryContainer.scrollLeft = 0;
+      setupGallery();
     });
 
     toggleCounter.addEventListener('change', () => {
       settings.showCounter = toggleCounter.checked;
-      touchCounterElement.style.opacity = settings.showCounter ? '1' : '0';
-      saveSettings(settings);
+      touchCounterEl.style.opacity = settings.showCounter ? '1' : '0';
+      saveSettings();
+    });
+
+    opacitySlider.addEventListener('input', () => {
+      settings.btnOpacity = parseInt(opacitySlider.value);
+      opacityValue.textContent = settings.btnOpacity + '%';
+      // Keep button fully visible while panel is open
+      if (!settingsPanel.classList.contains('open')) {
+        settingsBtn.style.opacity = settings.btnOpacity / 100;
+      }
+      saveSettings();
     });
 
     resetBtn.addEventListener('click', () => {
       touchCount = 0;
       isCounting = true;
-      touchCounterElement.textContent = '0';
+      touchCounterEl.textContent = '0';
       fullScreenImage.style.display = 'none';
     });
 
@@ -592,10 +669,10 @@
       if (!isCounting) return;
 
       touchCount++;
-      touchCounterElement.textContent = touchCount;
+      touchCounterEl.textContent = touchCount;
 
       if (touchCount >= settings.threshold) {
-        fullScreenImage.style.display = "block";
+        fullScreenImage.style.display = 'block';
         isCounting = false;
         if (settings.vibration && navigator.vibrate) navigator.vibrate(200);
         if (settings.fullscreen) enterFullscreen();
@@ -608,20 +685,16 @@
     }
 
     function lockOrientation() {
-      if (screen.orientation?.lock) {
-        screen.orientation.lock('portrait').catch(() => {});
-      }
+      if (screen.orientation?.lock) screen.orientation.lock('portrait').catch(() => {});
     }
 
     // ── Install button ────────────────────────────────────────
     let deferredPrompt;
-    const installButton = document.getElementById('installButton');
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
       installButton.style.display = 'block';
     });
-
     installButton.addEventListener('click', async () => {
       if (!deferredPrompt) return;
       deferredPrompt.prompt();
@@ -633,18 +706,18 @@
     // ── Service Worker ────────────────────────────────────────
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js')
-      .then(() => console.log('SW registrado'))
-      .catch(err => console.log('Error SW:', err));
+        .then(() => console.log('SW registrado'))
+        .catch(err => console.log('Error SW:', err));
     }
 
     // ── Init ──────────────────────────────────────────────────
-    document.addEventListener("DOMContentLoaded", () => {
-      document.body.addEventListener("touchstart", incrementTouchCount);
+    document.addEventListener('DOMContentLoaded', () => {
+      applySettings();
+      setupGallery();
+      document.body.addEventListener('touchstart', incrementTouchCount);
+
       if (window.matchMedia('(display-mode: standalone)').matches) {
-        setTimeout(() => {
-          lockOrientation();
-          enterFullscreen();
-        }, 500);
+        setTimeout(() => { lockOrientation(); enterFullscreen(); }, 500);
       }
     });
   </script>
