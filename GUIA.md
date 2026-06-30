@@ -125,15 +125,24 @@ mostrarse en el escritorio/móvil cuando se instala la PWA.
 
 ---
 
-## 4. Algo a tener en cuenta
+## 4. `sw.js` (Service Worker)
 
-El código de `index.html` intenta registrar un Service Worker en
-`./sw.js` (línea 708), pero **ese archivo no existe en el repositorio**. Esto
-significa que, por ahora, la app no tiene soporte offline real: el
-`console.log('Error SW:', err)` se disparará silenciosamente en la consola
-del navegador sin afectar al resto de la app (el `catch` evita que rompa
-nada), pero la PWA seguirá siendo instalable gracias al `manifest.json`
-aunque sin caché offline.
+Es el archivo que le da a la app su **funcionalidad offline**. Un Service
+Worker es un script que el navegador ejecuta "por detrás", incluso sin la
+página abierta, y que puede interceptar las peticiones de red para servir
+archivos desde una caché local. Aquí hace lo siguiente:
+
+- **`install`**: al instalarse, descarga y guarda en caché (`forzaje-intensamente-v1`)
+  todos los archivos estáticos de la app: `index.html`, `manifest.json`, los
+  iconos y todas las imágenes.
+- **`activate`**: borra cachés de versiones antiguas si en el futuro se
+  cambia `CACHE_NAME` (por ejemplo a `v2`), para no acumular basura.
+- **`fetch`**: cada vez que la app pide un archivo, primero mira si ya está
+  en caché y lo sirve desde ahí (rápido y funciona sin conexión); si no
+  está, lo descarga de la red y lo guarda en caché para la próxima vez.
+
+Gracias a esto, una vez que se abre la app por primera vez con conexión, se
+puede seguir usando aunque el móvil se quede sin internet.
 
 ---
 
