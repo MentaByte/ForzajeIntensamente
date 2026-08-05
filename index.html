@@ -511,50 +511,47 @@
 
     function initScrollPosition() {
       const size = getImageSize();
-      // Disable scroll event temporarily to avoid feedback loop
-      scrollPaused = true;
       if (settings.horizontal) {
         galleryContainer.scrollLeft = N * size;
       } else {
         galleryContainer.scrollTop = N * size;
       }
-      // Re-enable after browser has processed the assignment
-      requestAnimationFrame(() => { scrollPaused = false; });
     }
 
-    let scrollPaused = false;
-
-    function handleInfiniteScroll() {
-      if (scrollPaused) return;
+    // Only reposition once the browser has fully settled the scroll
+    // (native momentum + scroll-snap finished). Correcting mid-gesture
+    // fights the native scroll physics and causes jitter/skips.
+    function correctInfiniteScroll() {
       const size = getImageSize();
       const setSize = N * size;
 
       if (settings.horizontal) {
         const pos = galleryContainer.scrollLeft;
         if (pos < setSize) {
-          scrollPaused = true;
           galleryContainer.scrollLeft = pos + setSize;
-          requestAnimationFrame(() => { scrollPaused = false; });
         } else if (pos >= 2 * setSize) {
-          scrollPaused = true;
           galleryContainer.scrollLeft = pos - setSize;
-          requestAnimationFrame(() => { scrollPaused = false; });
         }
       } else {
         const pos = galleryContainer.scrollTop;
         if (pos < setSize) {
-          scrollPaused = true;
           galleryContainer.scrollTop = pos + setSize;
-          requestAnimationFrame(() => { scrollPaused = false; });
         } else if (pos >= 2 * setSize) {
-          scrollPaused = true;
           galleryContainer.scrollTop = pos - setSize;
-          requestAnimationFrame(() => { scrollPaused = false; });
         }
       }
     }
 
-    galleryContainer.addEventListener('scroll', handleInfiniteScroll, { passive: true });
+    let scrollEndTimer = null;
+    const SCROLL_END_DELAY = 120;
+
+    function handleScroll() {
+      clearTimeout(scrollEndTimer);
+      scrollEndTimer = setTimeout(correctInfiniteScroll, SCROLL_END_DELAY);
+    }
+
+    galleryContainer.addEventListener('scroll', handleScroll, { passive: true });
+    galleryContainer.addEventListener('scrollend', correctInfiniteScroll, { passive: true });
 
     function setupGallery() {
       buildGallery();
